@@ -43,7 +43,7 @@ use Cake\Routing\Route\DashedRoute;
  */
 Router::defaultRouteClass(DashedRoute::class);
 
-Router::scope('/', function (RouteBuilder $routes) {
+Router::scope('/api', function (RouteBuilder $routes) {
     /**
      * Here, we are connecting '/' (base path) to a controller called 'Pages',
      * its action called 'display', and we pass a param to select the view file
@@ -51,10 +51,14 @@ Router::scope('/', function (RouteBuilder $routes) {
      */
     $routes->connect('/', ['controller' => 'Pages', 'action' => 'display', 'home']);
 
+
+
     $routes->connect('/users', ['controller' => 'Api','action'=>'index']);
 
 
     $routes->resources('Users');
+
+
 
     /**
      * ...and connect the rest of 'Pages' controller's URLs.
