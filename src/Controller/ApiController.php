@@ -28,20 +28,54 @@ class ApiController extends AppController
         parent::initialize();
         $this->loadComponent('RequestHandler');
         $this->loadModel('Users');
+
+        $this->validateToken();        
+    }
+
+    public function validateToken(){
+        
+        if(empty($this->request->getHeader('Authorization'))){
+
+            $this->response->statusCode(401);
+            $this->setAction('missingToken');
+
+        }else{
+
+            $api_token = $this->request->getHeader('Authorization')[0];
+            $found = $this->Users->find()->where(['api_token' => $api_token])->toArray();
+
+            if(empty($found)){
+                $this->response->statusCode(401);
+                $this->setAction('invalidToken');
+            }
+        }
+    }
+
+    public function invalidToken(){
+        $message = 'Invalid Authorization Token';
+        $this->set('message',$message);
+    }
+
+    public function missingToken(){
+        $message = 'Missing Authorization Token';
+        $this->set('message',$message);
     }
 
     /**
      * GET the Users list allowing pagination, sorting and limitation of data returned
      *
-     * @param string $limit
-     * @param string $sortField
-     * @param string $sortDirection
+     * @param integer   $limit The limit of rows to be retrieved
+     * @param string    $sortField The field to be sorted by.
+     * @param string    $sortDirection Possible values are 'asc' or 'desc'.
+     * @param integer   page This is the page number that implements the Paginator automatically. 
      * @return list of users
      * @throws \Exception
      */
-    public function index()
-    {
-        try {
+    public function index(){
+
+       $this->request->allowMethod(['get']);
+
+       try {
 
             if(isset($this->request->query['limit'])){
                 $limit = $this->request->query['limit'];
@@ -76,5 +110,10 @@ class ApiController extends AppController
         }
 
     }
+
+
+
+
+
 
 }
