@@ -29,10 +29,12 @@ class ApiController extends AppController
         $this->loadComponent('RequestHandler');
         $this->loadModel('Users');
 
-        $this->validateToken();        
+        if($this->request->params['action'] != 'login'){
+            $this->validateToken();        
+        }
     }
 
-    public function validateToken(){
+    private function validateToken(){
         
         if(empty($this->request->getHeader('Authorization'))){
 
@@ -61,6 +63,18 @@ class ApiController extends AppController
         $this->set('message',$message);
     }
 
+    private function generateToken() {
+        $alphabet = "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";
+        $pass = array(); //remember to declare $pass as an array
+        $alphaLength = strlen($alphabet) - 1; //put the length -1 in cache
+     
+        for ($i = 0; $i < 32; $i++) {
+            $n = rand(0, $alphaLength);
+            $pass[] = $alphabet[$n];
+        }
+        return implode($pass); //turn the array into a string
+    }
+
     /**
      * GET the Users list allowing pagination, sorting and limitation of data returned
      *
@@ -73,46 +87,89 @@ class ApiController extends AppController
      */
     public function index(){
 
-       $this->request->allowMethod(['get']);
+       if($this->request->is(['get'])){
 
-       try {
+           try {
 
-            if(isset($this->request->query['limit'])){
-                $limit = $this->request->query['limit'];
+                if(isset($this->request->query['limit'])){
+                    $limit = $this->request->query['limit'];
+                }
+                
+                if(isset($this->request->query['sortField'])){
+                    $sortField = $this->request->query['sortField'];
+                }
+                
+                if(isset($this->request->query['sortDirection'])){
+                    $sortDirection = $this->request->query['sortDirection'];
+                }
+
+                if(isset($limit) && $limit>0){
+                    $this->paginate['limit'] = $limit;            
+                }
+
+                if(isset($sortField) && isset($sortDirection) && 
+                    (strtolower($sortDirection) === 'asc' || strtolower($sortDirection) === 'desc')){
+                    $this->paginate['order'] = ['Users.'.$sortField => $sortDirection];
+                }
+
+                //$this->paginate['conditions'] = ['Users.email' => 'xyz@gmail.com']; //conditions in WHERE clause
+                //$this->paginate['fields'] = ['Users.email', 'Users.last_name']; //fields to show
+
+                $users = $this->paginate($this->Users);
+                $this->set('users',$users);
+
+            } catch (\Exception $e) {
+                $this->response->statusCode(503);
+                $this->set('error',$e->errorInfo);
             }
-            
-            if(isset($this->request->query['sortField'])){
-                $sortField = $this->request->query['sortField'];
-            }
-            
-            if(isset($this->request->query['sortDirection'])){
-                $sortDirection = $this->request->query['sortDirection'];
-            }
 
-            if(isset($limit) && $limit>0){
-                $this->paginate['limit'] = $limit;            
-            }
-
-            if(isset($sortField) && isset($sortDirection) && 
-                (strtolower($sortDirection) === 'asc' || strtolower($sortDirection) === 'desc')){
-                $this->paginate['order'] = ['Users.'.$sortField => $sortDirection];
-            }
-
-            //$this->paginate['conditions'] = ['Users.email' => 'xyz@gmail.com']; //conditions in WHERE clause
-            //$this->paginate['fields'] = ['Users.email', 'Users.last_name']; //fields to show
-
-            $users = $this->paginate($this->Users);
-            $this->set('users',$users);
-
-        } catch (\Exception $e) {
-            $this->set('error',$e->errorInfo);
-            //Improve Error handling to return the correct status
-        }
+       }else{
+            $this->response->statusCode(405);
+            $this->set('error','Method Not Allowed');
+       }
 
     }
 
+    /**
+     * POST Authenticates the user and generates a new api token
+     *
+     * @return data of the user authenticated
+     * @throws \Exception
+     */
+    public function login(){
 
+        if($this->request->is('post')){
 
+            try{
+
+                $body = $this->request->getData();
+                $user = $this->Users
+                ->find()
+                ->where(['email'=>$body['email'],'password'=>$body['password'],'active'=>1])
+                ->toArray()[0];
+            
+                if (empty($user)){
+                    $this->response->statusCode(401);
+                    $message = 'Unauthorized user';
+                    $this->set('message',$message);
+                
+                }else{
+                    //Saves a new token for the logged in user
+                    $user['api_token'] = $this->generateToken();
+                    $this->Users->save($user);
+                    $this->set('user', $user);                  
+                }
+
+            }catch (\Exception $e) {
+                $this->response->statusCode(503);
+                $this->set('error',$e->errorInfo);
+            }
+
+        }else{
+            $this->response->statusCode(405);
+            $this->set('error','Method Not Allowed');
+       }
+    }
 
 
 

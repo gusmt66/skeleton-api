@@ -52,8 +52,11 @@ Router::scope('/api', function (RouteBuilder $routes) {
     $routes->connect('/', ['controller' => 'Pages', 'action' => 'display', 'home']);
 
 
+    $routes->connect('/users/login', ['controller' => 'Api','action'=>'login']);
+    $routes->connect('/users/logout', ['controller' => 'Api','action'=>'logout']);
 
     $routes->connect('/users', ['controller' => 'Api','action'=>'index']);
+
 
 
     $routes->resources('Users');
