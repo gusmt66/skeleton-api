@@ -18,17 +18,16 @@ use Cake\Core\Configure;
 use Cake\Network\Exception\ForbiddenException;
 use Cake\Network\Exception\NotFoundException;
 use Cake\View\Exception\MissingTemplateException;
+use Cake\Network\Exception\RecordNotFoundException;
 
 
 class ApiController extends AppController
 {
 
-    public function initialize()
-    {
+    public function initialize(){
         parent::initialize();
         $this->loadComponent('RequestHandler');
-        $this->loadModel('Users');
-
+        $this->loadModel('Users');       
         if($this->request->params['action'] != 'login'){
             $this->validateToken();        
         }
@@ -76,14 +75,89 @@ class ApiController extends AppController
     }
 
     /**
-     * GET the Users list allowing pagination, sorting and limitation of data returned
+     * POST Authenticates the user and generates a new api token.
      *
-     * @param integer   $limit The limit of rows to be retrieved
+     * @return data of the user authenticated.
+     * @throws \Exception.
+     */
+    public function login(){
+
+        if($this->request->is('post')){
+
+            try{
+
+                $body = $this->request->getData();
+
+                $user = $this->Users
+                ->find()
+                ->where(['email'=>$body['email'],'active'=>1])
+                ->toArray()[0];
+            
+                //If the user is found by email, it verifies if the password matches the one stored in DB.
+                if($user && password_verify($body['password'], $user['password'])){
+                    //Saves a new token for the logged in user
+                    $user['api_token'] = $this->generateToken();
+                    $this->Users->save($user);
+                    $this->set('user', $user);  
+                }else{
+                    $this->response->statusCode(401);
+                    $message = 'Unauthorized user';
+                    $this->set('message',$message);
+                }
+
+            }catch (\Exception $e) {
+                $this->response->statusCode(503);
+                $this->set('error',$e->getMessage());
+            }
+
+        }else{
+            $this->response->statusCode(405);
+            $this->set('error','Method Not Allowed');
+       }
+    }    
+
+    /**
+     * POST Creates a new user with the provided data.
+     *
+     * @return data of the user added to the Database.
+     * @throws \Exception.
+     */
+    public function add(){
+
+        if($this->request->is('post')){
+
+            try{
+
+                $user = $this->Users->newEntity($this->request->getData());
+
+                $user['password'] = password_hash($user['password'], PASSWORD_DEFAULT);
+                
+                if (!$this->Users->save($user)) {
+                    $this->set('message','Error saving the User');
+                }
+                
+                $this->set('user',$user);
+
+            }catch (\Exception $e) {
+                $this->response->statusCode(503);
+                $this->set('error',$e->getMessage());
+            }
+
+        }else{
+           $this->response->statusCode(405);
+           $this->set('error','Method Not Allowed');
+       }
+    }
+
+    /**
+     * GET Reads the list of users allowing pagination, sorting and limit the data returned.
+     *
+     * @param integer   $limit The limit of rows to be retrieved.
      * @param string    $sortField The field to be sorted by.
      * @param string    $sortDirection Possible values are 'asc' or 'desc'.
      * @param integer   page This is the page number that implements the Paginator automatically. 
-     * @return list of users
-     * @throws \Exception
+     * @return list of users.
+     * @throws \Exception.
      */
     public function index(){
 
@@ -120,56 +194,54 @@ class ApiController extends AppController
 
             } catch (\Exception $e) {
                 $this->response->statusCode(503);
-                $this->set('error',$e->errorInfo);
+                $this->set('error',$e->getMessage());
             }
 
        }else{
             $this->response->statusCode(405);
             $this->set('error','Method Not Allowed');
        }
-
     }
 
     /**
-     * POST Authenticates the user and generates a new api token
+     * PUT Updates a given user with the provided data.
      *
-     * @return data of the user authenticated
-     * @throws \Exception
+     * @return user's data updated from the given object.
+     * @throws \Exception.
      */
-    public function login(){
+    public function edit($id){
 
-        if($this->request->is('post')){
+       if($this->request->is('put')){
 
-            try{
+          try{
 
-                $body = $this->request->getData();
-                $user = $this->Users
-                ->find()
-                ->where(['email'=>$body['email'],'password'=>$body['password'],'active'=>1])
-                ->toArray()[0];
-            
-                if (empty($user)){
-                    $this->response->statusCode(401);
-                    $message = 'Unauthorized user';
-                    $this->set('message',$message);
-                
-                }else{
-                    //Saves a new token for the logged in user
-                    $user['api_token'] = $this->generateToken();
-                    $this->Users->save($user);
-                    $this->set('user', $user);                  
+                $user = $this->Users->get($id);
+
+                if($user){
+
+                    $user['password'] = password_hash($user['password'], PASSWORD_DEFAULT);
+                    $user = $this->Users->patchEntity($user, $this->request->getData());
+
+                    if (!$this->Users->save($user)) {
+                        $this->set('message','Error updating the User');
+                    }
+
+                    $this->set('user',$user);
+
                 }
 
             }catch (\Exception $e) {
-                $this->response->statusCode(503);
-                $this->set('error',$e->errorInfo);
+                $this->response->statusCode(404);
+                $this->set('error',$e->getMessage());
             }
 
-        }else{
-            $this->response->statusCode(405);
-            $this->set('error','Method Not Allowed');
+       }else{
+           $this->response->statusCode(405);
+           $this->set('error','Method Not Allowed');
        }
-    }
+
+   }
+
 
 
 

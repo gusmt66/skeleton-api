@@ -43,19 +43,21 @@ use Cake\Routing\Route\DashedRoute;
  */
 Router::defaultRouteClass(DashedRoute::class);
 
-Router::scope('/api', function (RouteBuilder $routes) {
+Router::scope('/api', function ($routes) {
     /**
      * Here, we are connecting '/' (base path) to a controller called 'Pages',
      * its action called 'display', and we pass a param to select the view file
      * to use (in this case, src/Template/Pages/home.ctp)...
      */
-    $routes->connect('/', ['controller' => 'Pages', 'action' => 'display', 'home']);
+    //$routes->connect('/', ['controller' => 'Pages', 'action' => 'display', 'home']);
 
 
     $routes->connect('/users/login', ['controller' => 'Api','action'=>'login']);
     $routes->connect('/users/logout', ['controller' => 'Api','action'=>'logout']);
 
-    $routes->connect('/users', ['controller' => 'Api','action'=>'index']);
+    $routes->connect('/users', ['controller' => 'Api','action'=>'add','_method' => 'POST']);
+    $routes->connect('/users', ['controller' => 'Api','action'=>'index','_method' => 'GET']);
+    $routes->connect('/users/:id', ['controller' => 'Api','action'=>'edit','_method' => 'PUT'],['id' => '\d+', 'pass' => ['id']]);
 
 
 
@@ -66,7 +68,7 @@ Router::scope('/api', function (RouteBuilder $routes) {
     /**
      * ...and connect the rest of 'Pages' controller's URLs.
      */
-    $routes->connect('/pages/*', ['controller' => 'Pages', 'action' => 'display']);
+    //$routes->connect('/pages/*', ['controller' => 'Pages', 'action' => 'display']);
 
     /**
      * Connect catchall routes for all controllers.
