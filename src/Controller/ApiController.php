@@ -186,10 +186,37 @@ class ApiController extends AppController
                     $this->paginate['order'] = ['Users.'.$sortField => $sortDirection];
                 }
 
-                //$this->paginate['conditions'] = ['Users.email' => 'xyz@gmail.com']; //conditions in WHERE clause
+                //Search Fields
+                if(isset($this->request->query['first_name'])){
+                    $first_name = $this->request->query['first_name'];
+                    $conditions['first_name LIKE'] = '%'. $first_name .'%';
+                }
+
+                if(isset($this->request->query['last_name'])){
+                    $last_name = $this->request->query['last_name'];
+                    $conditions['last_name LIKE'] = '%'. $last_name .'%';
+                }
+
+                if(isset($this->request->query['ci_number'])){
+                    $ci_number = $this->request->query['ci_number'];
+                    $conditions['ci_number LIKE '] = '%'.$ci_number.'%';
+                }
+
+                if(isset($this->request->query['email'])){
+                    $email = $this->request->query['email'];
+                    $conditions['email LIKE'] = '%'. $email .'%';
+                }
+                
+                $this->paginate['conditions'] = $conditions;
+
+                //$this->paginate['conditions'] = ['email' => 'xyz@gmail.com','first_name LIKE'=>'%%']; //conditions in WHERE clause
                 //$this->paginate['fields'] = ['Users.email', 'Users.last_name']; //fields to show
 
-                $users = $this->paginate($this->Users);
+                $query = $this->Users
+                        ->find()
+                        ->select(['user_id','username','first_name','last_name','ci_number','email','active']);
+                $users = $this->paginate($query);
+
                 $this->set('users',$users);
 
             } catch (\Exception $e) {
@@ -219,6 +246,49 @@ class ApiController extends AppController
 
                 if($user){
 
+                    $body = $this->request->getData();
+
+                    if(!empty($body['password'])){
+                        $user['password'] = password_hash($body['password'], PASSWORD_DEFAULT);
+                    }
+
+                    $user = $this->Users->patchEntity($user, $body);
+
+                    if (!$this->Users->save($user)) {
+                        $this->set('message','Error updating the User');
+                    }
+
+                    $this->set('user',$user);
+
+                }
+
+            }catch (\Exception $e) {
+                $this->response->statusCode(404);
+                $this->set('error',$e->getMessage());
+            }
+
+       }else{
+           $this->response->statusCode(405);
+           $this->set('error','Method Not Allowed');
+       }
+   }
+
+    /**
+     * DELETE Removes a given user.
+     *
+     * @return user's data updated from the given object.
+     * @throws \Exception.
+     */
+    public function delete($id){
+
+       if($this->request->is('delete')){
+
+          try{
+
+                $user = $this->Users->get($id);
+
+                if($user){
+
                     $user['password'] = password_hash($user['password'], PASSWORD_DEFAULT);
                     $user = $this->Users->patchEntity($user, $this->request->getData());
 
@@ -241,8 +311,6 @@ class ApiController extends AppController
        }
 
    }
-
-
 
 
 }
