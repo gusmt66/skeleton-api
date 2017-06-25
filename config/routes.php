@@ -49,27 +49,33 @@ Router::scope('/api', function ($routes) {
      * its action called 'display', and we pass a param to select the view file
      * to use (in this case, src/Template/Pages/home.ctp)...
      */
-    //$routes->connect('/', ['controller' => 'Pages', 'action' => 'display', 'home']);
 
-
+    //Login
     $routes->connect('/users/login', ['controller' => 'Api','action'=>'login']);
+    
+    //Logout
     $routes->connect('/users/logout', ['controller' => 'Api','action'=>'logout']);
 
+    //Create user
     $routes->connect('/users', ['controller' => 'Api','action'=>'add','_method' => 'POST']);
+
+    //Get list of users
     $routes->connect('/users', ['controller' => 'Api','action'=>'index','_method' => 'GET']);
+
+    //Get user
+    $routes->connect('/users/:id', ['controller' => 'Api','action'=>'getUser','_method' => 'GET'],['id' => '\d+', 'pass' => ['id']]);
+
+    //Update user
     $routes->connect('/users/:id', ['controller' => 'Api','action'=>'edit','_method' => 'PUT'],['id' => '\d+', 'pass' => ['id']]);
+
+    //Delete user
     $routes->connect('/users/:id', ['controller' => 'Api','action'=>'delete','_method' => 'DELETE'],['id' => '\d+', 'pass' => ['id']]);
 
 
 
+    /* Resources */
     $routes->resources('Users');
 
-
-
-    /**
-     * ...and connect the rest of 'Pages' controller's URLs.
-     */
-    //$routes->connect('/pages/*', ['controller' => 'Pages', 'action' => 'display']);
 
     /**
      * Connect catchall routes for all controllers.
