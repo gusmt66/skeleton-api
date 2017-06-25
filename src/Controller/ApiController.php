@@ -276,6 +276,41 @@ class ApiController extends AppController
     }
 
     /**
+     * GET Retrieves a user by the given user id.
+     *
+     * @return user's data.
+     * @throws \Exception.
+     */
+    public function getUser($id){
+
+       if($this->request->is('get')){
+
+          try{
+
+                $user = $this->Users
+                        ->find()
+                        ->where(['user_id'=>$id])
+                        ->select(['user_id','username','first_name','last_name','ci_number','email','active'])
+                        ->toArray();
+
+                if($user){
+                    $this->set('user',$user[0]);
+                }else{
+                    throw new NotFoundException("User Not Found", 1);
+                }
+
+            }catch (\Exception $e) {
+                $this->response->statusCode(404);
+                $this->set('error',$e->getMessage());
+            }
+
+       }else{
+           $this->response->statusCode(405);
+           $this->set('error','Method Not Allowed');
+       }
+   }    
+
+    /**
      * PUT Updates a given user with the provided data.
      *
      * @return user's data updated from the given object.
@@ -287,9 +322,10 @@ class ApiController extends AppController
 
           try{
 
-                $user = $this->Users->get($id);
+                $user = $this->Users->find()->where(['user_id'=>$id])->toArray();
 
                 if($user){
+                    $user = $user[0];
 
                     $body = $this->request->getData();
 
@@ -305,6 +341,8 @@ class ApiController extends AppController
 
                     $this->set('user',$user);
 
+                }else{
+                    throw new NotFoundException("User Not Found", 1);
                 }
 
             }catch (\Exception $e) {

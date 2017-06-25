@@ -36,4 +36,12 @@ up the built-in webserver with:
 bin/cake server -p 8765
 ```
 
-Then visit `http://localhost:8765` to see the welcome page.
+Then you can start using the API calling these endpoints:
+
+POST 	http://localhost:8765/api/users/login
+POST 	http://localhost:8765/api/users/logout
+POST 	http://localhost:8765/api/users
+GET  	http://localhost:8765/api/users?ci_number=14&last_name=mo&first_name=u&sortField=last_name&sortDirection=desc&limit=2
+GET  	http://localhost:8765/api/users/{id}
+PUT  	http://localhost:8765/api/users/{id}
+DELETE	http://localhost:8765/api/users/{id}
