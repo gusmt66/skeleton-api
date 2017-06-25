@@ -1,11 +1,16 @@
-# CakePHP Application Skeleton
+# Skeleton for an API Application
 
-[![Build Status](https://img.shields.io/travis/cakephp/app/master.svg?style=flat-square)](https://travis-ci.org/cakephp/app)
-[![License](https://img.shields.io/packagist/l/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
+A skeleton for creating API applications with [CakePHP](http://cakephp.org) 3.x.
 
-A skeleton for creating applications with [CakePHP](http://cakephp.org) 3.x.
+## Description
 
-The framework source code can be found here: [cakephp/cakephp](https://github.com/cakephp/cakephp).
+This Application is a starting point for creating an API to be consumed from other apps. It includes a basic MySQL script for the User's table.
+
+## Features
+1. Includes login and logout endpoints to be used for authentication purposes.
+2. Includes CRUD endpoints for Users based on the REST guidelines.
+3. Authorization token is generated within the app to be used in the header's requests.
+4. It is a basic application. Feel free to add or improve features.
 
 ## Installation
 
@@ -32,20 +37,3 @@ bin/cake server -p 8765
 ```
 
 Then visit `http://localhost:8765` to see the welcome page.
-
-## Update
-
-Since this skeleton is a starting point for your application and various files
-would have been modified as per your needs, there isn't a way to provide
-automated upgrades, so you have to do any updates manually.
-
-## Configuration
-
-Read and edit `config/app.php` and setup the `'Datasources'` and any other
-configuration relevant for your application.
-
-## Layout
-
-The app skeleton uses a subset of [Foundation](http://foundation.zurb.com/) CSS
-framework by default. You can, however, replace it with any other library or
-custom styles.

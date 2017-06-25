@@ -64,7 +64,7 @@ class ApiController extends AppController
 
     private function generateToken() {
         $alphabet = "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";
-        $pass = array(); //remember to declare $pass as an array
+        $pass = array(); //$pass must be an array
         $alphaLength = strlen($alphabet) - 1; //put the length -1 in cache
      
         for ($i = 0; $i < 32; $i++) {
@@ -75,7 +75,7 @@ class ApiController extends AppController
     }
 
     /**
-     * POST Authenticates the user and generates a new api token.
+     * POST Authenticates the user and generates a new api token and stores it in the table.
      *
      * @return data of the user authenticated.
      * @throws \Exception.
@@ -115,6 +115,49 @@ class ApiController extends AppController
             $this->set('error','Method Not Allowed');
        }
     }    
+
+
+    /**
+     * POST Logs out the user of the application by deleting their api token from the table.
+     *
+     * @return a simple message with success or error logging out.
+     * @throws \Exception.
+     */
+    public function logout(){
+
+       if($this->request->is('post')){
+
+          try{
+
+                $api_token = $this->request->getHeader('Authorization')[0];
+
+                $user = $this->Users->find()->where(['api_token' => $api_token])->toArray()[0];
+
+                if($user){
+
+                    $user['api_token'] = NULL;
+
+                    if ($this->Users->save($user)) {
+                        $message = 'Logged out succesfully';
+                    }else{
+                        $message = 'Error during logging out';
+                    }
+
+                    $this->set('message',$message);
+
+                }
+
+            }catch (\Exception $e) {
+                $this->response->statusCode(404);
+                $this->set('error',$e->getMessage());
+            }
+
+       }else{
+           $this->response->statusCode(405);
+           $this->set('error','Method Not Allowed');
+       }
+   }
+
 
     /**
      * POST Creates a new user with the provided data.
@@ -206,7 +249,9 @@ class ApiController extends AppController
                     $email = $this->request->query['email'];
                     $conditions['email LIKE'] = '%'. $email .'%';
                 }
-                
+
+                $conditions['active'] = 1;
+
                 $this->paginate['conditions'] = $conditions;
 
                 //$this->paginate['conditions'] = ['email' => 'xyz@gmail.com','first_name LIKE'=>'%%']; //conditions in WHERE clause
@@ -289,14 +334,13 @@ class ApiController extends AppController
 
                 if($user){
 
-                    $user['password'] = password_hash($user['password'], PASSWORD_DEFAULT);
-                    $user = $this->Users->patchEntity($user, $this->request->getData());
-
-                    if (!$this->Users->save($user)) {
-                        $this->set('message','Error updating the User');
+                    if ($this->Users->delete($user)) {
+                        $message = 'User deleted succesfully';
+                    }else{
+                        $message = 'User could not be deleted';
                     }
 
-                    $this->set('user',$user);
+                    $this->set('message',$message);
 
                 }
 
@@ -309,7 +353,6 @@ class ApiController extends AppController
            $this->response->statusCode(405);
            $this->set('error','Method Not Allowed');
        }
-
    }
 
 

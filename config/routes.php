@@ -58,6 +58,7 @@ Router::scope('/api', function ($routes) {
     $routes->connect('/users', ['controller' => 'Api','action'=>'add','_method' => 'POST']);
     $routes->connect('/users', ['controller' => 'Api','action'=>'index','_method' => 'GET']);
     $routes->connect('/users/:id', ['controller' => 'Api','action'=>'edit','_method' => 'PUT'],['id' => '\d+', 'pass' => ['id']]);
+    $routes->connect('/users/:id', ['controller' => 'Api','action'=>'delete','_method' => 'DELETE'],['id' => '\d+', 'pass' => ['id']]);
 
 
 
