@@ -42,6 +42,9 @@ class ApiController extends AppController
 
         }else{
 
+            //desencriptarlo en username, password y fecha. Con esta data verificar en BD.
+            //Si la fecha actual es mayor a la de expiracion, arrojar error.
+
             $api_token = $this->request->getHeader('Authorization')[0];
             $found = $this->Users->find()->where(['api_token' => $api_token])->toArray();
 
@@ -63,6 +66,11 @@ class ApiController extends AppController
     }
 
     private function generateToken() {
+
+        //Recibe usuario y contrasena
+        //genera un token con estos datos + la fecha de expiracion
+        //Retorna el token.
+
         $alphabet = "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";
         $pass = array(); //$pass must be an array
         $alphaLength = strlen($alphabet) - 1; //put the length -1 in cache
@@ -115,49 +123,6 @@ class ApiController extends AppController
             $this->set('error','Method Not Allowed');
        }
     }    
-
-
-    /**
-     * POST Logs out the user of the application by deleting their api token from the table.
-     *
-     * @return a simple message with success or error logging out.
-     * @throws \Exception.
-     */
-    public function logout(){
-
-       if($this->request->is('post')){
-
-          try{
-
-                $api_token = $this->request->getHeader('Authorization')[0];
-
-                $user = $this->Users->find()->where(['api_token' => $api_token])->toArray()[0];
-
-                if($user){
-
-                    $user['api_token'] = NULL;
-
-                    if ($this->Users->save($user)) {
-                        $message = 'Logged out succesfully';
-                    }else{
-                        $message = 'Error during logging out';
-                    }
-
-                    $this->set('message',$message);
-
-                }
-
-            }catch (\Exception $e) {
-                $this->response->statusCode(404);
-                $this->set('error',$e->getMessage());
-            }
-
-       }else{
-           $this->response->statusCode(405);
-           $this->set('error','Method Not Allowed');
-       }
-   }
-
 
     /**
      * POST Creates a new user with the provided data.
