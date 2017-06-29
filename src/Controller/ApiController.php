@@ -32,7 +32,7 @@ class ApiController extends AppController
         parent::initialize();
         $this->loadComponent('RequestHandler');
         $this->loadComponent('Encryption');
-        $this->loadModel('Users');       
+        $this->loadModel('Users');      
         if($this->request->params['action'] != 'login'){
             $this->validateToken();        
         }
@@ -51,38 +51,47 @@ class ApiController extends AppController
         }else{
 
             $token = $this->request->getHeader('Authorization')[0];
+            
             $tokenArray = preg_split("/[.]/", $token);
 
-            $partA = $tokenArray[0];
-            $partB = $tokenArray[1];
+            //Validates that the token has a dot
+            if(sizeof($tokenArray) > 1){
 
-            $email = EncryptionComponent::Decrypt($partA, Security::salt());
-            $expDate = EncryptionComponent::Decrypt($partB, Security::salt());
+                $partA = $tokenArray[0];
+                $partB = $tokenArray[1];
 
-            $user = $this->Users
-                ->find()
-                ->where(['email'=>$email,'active'=>1])
-                ->toArray()[0];
+                $email = EncryptionComponent::Decrypt($partA, Security::salt());
+                $expDate = EncryptionComponent::Decrypt($partB, Security::salt());
 
-            if(!empty($user)){
+                $user = $this->Users
+                    ->find()
+                    ->where(['email'=>$email,'active'=>1])
+                    ->toArray()[0];
 
-                $dateArray = preg_split("/[_]/",$expDate);
-                $datePart = $dateArray[0];
-                $timePart = $dateArray[1];
-                $timePart = str_replace('-', ':', $timePart);
+                if(!empty($user)){
 
-                $expirationDate = new Time($datePart . ' ' . $timePart);
-                $now = new Time(null, 'America/New_York');
+                    $dateArray = preg_split("/[_]/",$expDate);
+                    $datePart = $dateArray[0];
+                    $timePart = $dateArray[1];
+                    $timePart = str_replace('-', ':', $timePart);
 
-                if($now < $expirationDate){
+                    $expirationDate = new Time($datePart . ' ' . $timePart);
+                    $now = new Time(null, 'America/New_York');
+
+                    if($now < $expirationDate){
+                        $this->response->statusCode(401);
+                        $this->setAction('expiredToken');
+                    }
+
+                }else{
                     $this->response->statusCode(401);
-                    $this->setAction('expiredToken');
-                }
+                    $this->setAction('invalidToken');
+                }  
 
             }else{
                 $this->response->statusCode(401);
                 $this->setAction('invalidToken');
-            }   
+            }
         }
     }
 
@@ -256,12 +265,9 @@ class ApiController extends AppController
 
                 $this->paginate['conditions'] = $conditions;
 
-                //$this->paginate['conditions'] = ['email' => 'xyz@gmail.com','first_name LIKE'=>'%%']; //conditions in WHERE clause
-                //$this->paginate['fields'] = ['Users.email', 'Users.last_name']; //fields to show
-
                 $query = $this->Users
                         ->find()
-                        ->select(['user_id','username','first_name','last_name','ci_number','email','active']);
+                        ->select(['user_id','first_name','last_name','ci_number','email','active']);
                 $users = $this->paginate($query);
 
                 $this->set('users',$users);
@@ -292,7 +298,7 @@ class ApiController extends AppController
                 $user = $this->Users
                         ->find()
                         ->where(['user_id'=>$id])
-                        ->select(['user_id','username','first_name','last_name','ci_number','email','active'])
+                        ->select(['user_id','first_name','last_name','ci_number','email','active'])
                         ->toArray();
 
                 if($user){
