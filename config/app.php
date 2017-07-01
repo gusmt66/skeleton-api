@@ -63,6 +63,7 @@ return [
      *   The salt value is also used as the encryption key.
      *   You should treat it as extremely sensitive data.
      */
+     /* DO NOT CHANGE THIS SALT BECAUSE IT IS USED AS A KEY IN THE TOKEN ENCRYPTION IN THE API */
     'Security' => [
         'salt' => env('SECURITY_SALT', 'b2a6222357bc90d7fb7eff7656d4c6ca30bf5f10964c4e4e1ddb6fd0650a9c62'),
     ],

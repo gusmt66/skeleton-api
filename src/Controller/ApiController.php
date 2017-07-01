@@ -19,6 +19,10 @@ use Cake\Network\Exception\ForbiddenException;
 use Cake\Network\Exception\NotFoundException;
 use Cake\View\Exception\MissingTemplateException;
 use Cake\Network\Exception\RecordNotFoundException;
+use Cake\Event\Event;
+use Cake\I18n\Time;
+use Cake\Utility\Security;
+use App\Controller\Component\EncryptionComponent;
 
 
 class ApiController extends AppController
@@ -27,10 +31,14 @@ class ApiController extends AppController
     public function initialize(){
         parent::initialize();
         $this->loadComponent('RequestHandler');
-        $this->loadModel('Users');       
+        $this->loadComponent('Encryption');
+        $this->loadModel('Users');      
         if($this->request->params['action'] != 'login'){
             $this->validateToken();        
         }
+    }
+
+    public function beforeFilter(Event $event){
     }
 
     private function validateToken(){
@@ -42,10 +50,45 @@ class ApiController extends AppController
 
         }else{
 
-            $api_token = $this->request->getHeader('Authorization')[0];
-            $found = $this->Users->find()->where(['api_token' => $api_token])->toArray();
+            $token = $this->request->getHeader('Authorization')[0];
+            
+            $tokenArray = preg_split("/[.]/", $token);
 
-            if(empty($found)){
+            //Validates that the token has a dot
+            if(sizeof($tokenArray) > 1){
+
+                $partA = $tokenArray[0];
+                $partB = $tokenArray[1];
+
+                $email = EncryptionComponent::Decrypt($partA, Security::salt());
+                $expDate = EncryptionComponent::Decrypt($partB, Security::salt());
+
+                $user = $this->Users
+                    ->find()
+                    ->where(['email'=>$email,'active'=>1])
+                    ->toArray()[0];
+
+                if(!empty($user)){
+
+                    $dateArray = preg_split("/[_]/",$expDate);
+                    $datePart = $dateArray[0];
+                    $timePart = $dateArray[1];
+                    $timePart = str_replace('-', ':', $timePart);
+
+                    $expirationDate = new Time($datePart . ' ' . $timePart);
+                    $now = new Time(null, 'America/New_York');
+
+                    if($now < $expirationDate){
+                        $this->response->statusCode(401);
+                        $this->setAction('expiredToken');
+                    }
+
+                }else{
+                    $this->response->statusCode(401);
+                    $this->setAction('invalidToken');
+                }  
+
+            }else{
                 $this->response->statusCode(401);
                 $this->setAction('invalidToken');
             }
@@ -62,16 +105,27 @@ class ApiController extends AppController
         $this->set('message',$message);
     }
 
-    private function generateToken() {
-        $alphabet = "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";
-        $pass = array(); //$pass must be an array
-        $alphaLength = strlen($alphabet) - 1; //put the length -1 in cache
-     
-        for ($i = 0; $i < 32; $i++) {
-            $n = rand(0, $alphaLength);
-            $pass[] = $alphabet[$n];
-        }
-        return implode($pass); //turn the array into a string
+    public function expiredToken(){
+        $message = 'Expired Authorization Token';
+        $this->set('message',$message);
+    }
+
+    /**
+    * Generates a token based on the user's email and the expiration datetime of the session.
+    * The session is set to last 4 hours.
+    * @param string     $email Email address of the user
+    * @return a token to validate the user's session
+    */
+    private function generateToken($email) {
+
+        $expirationDate = new Time(null, 'America/New_York');
+        $expirationDate->modify('+4 hours');
+        $expirationDate = $expirationDate->format('Y-m-d_H-i-s');
+
+        //The token is formed in 2 encrypted parts: email + token expiration Date
+        $partA = EncryptionComponent::Crypt($email, Security::salt());
+        $partB = EncryptionComponent::Crypt($expirationDate, Security::salt());
+        return $partA . '.' . $partB;
     }
 
     /**
@@ -95,69 +149,26 @@ class ApiController extends AppController
             
                 //If the user is found by email, it verifies if the password matches the one stored in DB.
                 if($user && password_verify($body['password'], $user['password'])){
-                    //Saves a new token for the logged in user
-                    $user['api_token'] = $this->generateToken();
-                    $this->Users->save($user);
-                    $this->set('user', $user);  
+
+                    $token = $this->generateToken($user['email']);
+                    $this->set('user', $user);
+                    $this->set('token', $token); 
+                
                 }else{
+                
                     $this->response->statusCode(401);
                     $message = 'Unauthorized user';
                     $this->set('message',$message);
                 }
-
             }catch (\Exception $e) {
                 $this->response->statusCode(503);
                 $this->set('error',$e->getMessage());
             }
-
         }else{
             $this->response->statusCode(405);
             $this->set('error','Method Not Allowed');
        }
     }    
-
-
-    /**
-     * POST Logs out the user of the application by deleting their api token from the table.
-     *
-     * @return a simple message with success or error logging out.
-     * @throws \Exception.
-     */
-    public function logout(){
-
-       if($this->request->is('post')){
-
-          try{
-
-                $api_token = $this->request->getHeader('Authorization')[0];
-
-                $user = $this->Users->find()->where(['api_token' => $api_token])->toArray()[0];
-
-                if($user){
-
-                    $user['api_token'] = NULL;
-
-                    if ($this->Users->save($user)) {
-                        $message = 'Logged out succesfully';
-                    }else{
-                        $message = 'Error during logging out';
-                    }
-
-                    $this->set('message',$message);
-
-                }
-
-            }catch (\Exception $e) {
-                $this->response->statusCode(404);
-                $this->set('error',$e->getMessage());
-            }
-
-       }else{
-           $this->response->statusCode(405);
-           $this->set('error','Method Not Allowed');
-       }
-   }
-
 
     /**
      * POST Creates a new user with the provided data.
@@ -254,12 +265,9 @@ class ApiController extends AppController
 
                 $this->paginate['conditions'] = $conditions;
 
-                //$this->paginate['conditions'] = ['email' => 'xyz@gmail.com','first_name LIKE'=>'%%']; //conditions in WHERE clause
-                //$this->paginate['fields'] = ['Users.email', 'Users.last_name']; //fields to show
-
                 $query = $this->Users
                         ->find()
-                        ->select(['user_id','username','first_name','last_name','ci_number','email','active']);
+                        ->select(['user_id','first_name','last_name','ci_number','email','active']);
                 $users = $this->paginate($query);
 
                 $this->set('users',$users);
@@ -290,7 +298,7 @@ class ApiController extends AppController
                 $user = $this->Users
                         ->find()
                         ->where(['user_id'=>$id])
-                        ->select(['user_id','username','first_name','last_name','ci_number','email','active'])
+                        ->select(['user_id','first_name','last_name','ci_number','email','active'])
                         ->toArray();
 
                 if($user){
