@@ -50,31 +50,34 @@ Router::scope('/api', function ($routes) {
      * to use (in this case, src/Template/Pages/home.ctp)...
      */
 
+    /* USERS */
     //Login
-    $routes->connect('/users/login', ['controller' => 'Api','action'=>'login']);
+    $routes->connect('/users/login', ['controller' => 'Users','action'=>'login']);
     
     //Logout
-    $routes->connect('/users/logout', ['controller' => 'Api','action'=>'logout']);
+    $routes->connect('/users/logout', ['controller' => 'Users','action'=>'logout']);
 
     //Create user
-    $routes->connect('/users', ['controller' => 'Api','action'=>'add','_method' => 'POST']);
+    $routes->connect('/users', ['controller' => 'Users','action'=>'add','_method' => 'POST']);
 
     //Get list of users
-    $routes->connect('/users', ['controller' => 'Api','action'=>'index','_method' => 'GET']);
+    $routes->connect('/users', ['controller' => 'Users','action'=>'index','_method' => 'GET']);
 
     //Get user
-    $routes->connect('/users/:id', ['controller' => 'Api','action'=>'getUser','_method' => 'GET'],['id' => '\d+', 'pass' => ['id']]);
+    $routes->connect('/users/:id', ['controller' => 'Users','action'=>'get','_method' => 'GET'],['id' => '\d+', 'pass' => ['id']]);
 
     //Update user
-    $routes->connect('/users/:id', ['controller' => 'Api','action'=>'edit','_method' => 'PUT'],['id' => '\d+', 'pass' => ['id']]);
+    $routes->connect('/users/:id', ['controller' => 'Users','action'=>'edit','_method' => 'PUT'],['id' => '\d+', 'pass' => ['id']]);
 
     //Delete user
-    $routes->connect('/users/:id', ['controller' => 'Api','action'=>'delete','_method' => 'DELETE'],['id' => '\d+', 'pass' => ['id']]);
+    $routes->connect('/users/:id', ['controller' => 'Users','action'=>'delete','_method' => 'DELETE'],['id' => '\d+', 'pass' => ['id']]);
 
 
 
-    /* Resources */
+
+    /* *** ROUTE RESOURCES *** */
     $routes->resources('Users');
+
 
 
     /**

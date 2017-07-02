@@ -15,7 +15,14 @@
 namespace App\Controller;
 
 use Cake\Controller\Controller;
+use Cake\Network\Exception\ForbiddenException;
+use Cake\Network\Exception\NotFoundException;
+use Cake\View\Exception\MissingTemplateException;
+use Cake\Network\Exception\RecordNotFoundException;
 use Cake\Event\Event;
+use Cake\I18n\Time;
+use Cake\Utility\Security;
+use App\Controller\Component\EncryptionComponent;
 
 /**
  * Application Controller
@@ -64,4 +71,96 @@ class AppController extends Controller
         $this->response->type('application/json');
         $this->set('_serialize', true);
     }
+
+    protected function validateToken(){
+        
+        if(empty($this->request->getHeader('Authorization'))){
+
+            $this->response->statusCode(401);
+            $this->setAction('missingToken');
+
+        }else{
+
+            $token = $this->request->getHeader('Authorization')[0];
+            
+            $tokenArray = preg_split("/[.]/", $token);
+
+            //Validates that the token has a dot
+            if(sizeof($tokenArray) > 1){
+
+                $partA = $tokenArray[0];
+                $partB = $tokenArray[1];
+
+                $email = EncryptionComponent::Decrypt($partA, Security::salt());
+                $expDate = EncryptionComponent::Decrypt($partB, Security::salt());
+
+                $user = $this->Users
+                    ->find()
+                    ->where(['email'=>$email,'active'=>1])
+                    ->toArray()[0];
+
+                if(!empty($user)){
+
+                    $dateArray = preg_split("/[_]/",$expDate);
+                    $datePart = $dateArray[0];
+                    $timePart = $dateArray[1];
+                    $timePart = str_replace('-', ':', $timePart);
+
+                    $expirationDate = new Time($datePart . ' ' . $timePart);
+                    $now = new Time(null, 'America/New_York');
+
+                    if($now < $expirationDate){
+                        $this->response->statusCode(401);
+                        $this->setAction('expiredToken');
+                    }
+
+                }else{
+                    $this->response->statusCode(401);
+                    $this->setAction('invalidToken');
+                }  
+
+            }else{
+                $this->response->statusCode(401);
+                $this->setAction('invalidToken');
+            }
+        }
+    }
+
+    protected function invalidToken(){
+        $message = 'Invalid Authorization Token';
+        $this->set('message',$message);
+    }
+
+    protected function missingToken(){
+        $message = 'Missing Authorization Token';
+        $this->set('message',$message);
+    }
+
+    protected function expiredToken(){
+        $message = 'Expired Authorization Token';
+        $this->set('message',$message);
+    }
+
+    /**
+    * Generates a token based on the user's email and the expiration datetime of the session.
+    * The session is set to last 4 hours.
+    * @param string     $email Email address of the user
+    * @return a token to validate the user's session
+    */
+    protected function generateToken($email) {
+
+        $expirationDate = new Time(null, 'America/New_York');
+        $expirationDate->modify('+4 hours');
+        $expirationDate = $expirationDate->format('Y-m-d_H-i-s');
+
+        //The token is formed in 2 encrypted parts: email + token expiration Date
+        $partA = EncryptionComponent::Crypt($email, Security::salt());
+        $partB = EncryptionComponent::Crypt($expirationDate, Security::salt());
+        return $partA . '.' . $partB;
+    }
+
+
+
+
+
 }
