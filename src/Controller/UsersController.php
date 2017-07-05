@@ -58,13 +58,13 @@ class UsersController extends AppController
                 $user = $this->Users
                 ->find()
                 ->where(['email'=>$body['email'],'active'=>1])
-                ->toArray()[0];
+                ->toArray();
             
                 //If the user is found by email, it verifies if the password matches the one stored in DB.
-                if($user && password_verify($body['password'], $user['password'])){
+                if($user[0] && password_verify($body['password'], $user[0]['password'])){
 
                     $token = $this->generateToken($user['email']);
-                    $this->set('user', $user);
+                    $this->set('user', $user[0]);
                     $this->set('token', $token); 
                 
                 }else{
@@ -78,8 +78,7 @@ class UsersController extends AppController
                 $this->set('error',$e->getMessage());
             }
         }else{
-            $this->response->statusCode(405);
-            $this->set('error','Method Not Allowed');
+            $this->setAction('invalidMethod');
        }
     }    
 
@@ -111,8 +110,7 @@ class UsersController extends AppController
             }
 
         }else{
-           $this->response->statusCode(405);
-           $this->set('error','Method Not Allowed');
+           $this->setAction('invalidMethod');
        }
     }
 
@@ -191,8 +189,7 @@ class UsersController extends AppController
             }
 
        }else{
-            $this->response->statusCode(405);
-            $this->set('error','Method Not Allowed');
+            $this->setAction('invalidMethod');
        }
     }
 
@@ -226,8 +223,7 @@ class UsersController extends AppController
             }
 
        }else{
-           $this->response->statusCode(405);
-           $this->set('error','Method Not Allowed');
+           $this->setAction('invalidMethod');
        }
    }    
 
@@ -272,8 +268,7 @@ class UsersController extends AppController
             }
 
        }else{
-           $this->response->statusCode(405);
-           $this->set('error','Method Not Allowed');
+           $this->setAction('invalidMethod');
        }
    }
 
@@ -309,8 +304,7 @@ class UsersController extends AppController
             }
 
        }else{
-           $this->response->statusCode(405);
-           $this->set('error','Method Not Allowed');
+           $this->setAction('invalidMethod');
        }
    }
 

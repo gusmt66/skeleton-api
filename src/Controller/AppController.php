@@ -76,7 +76,6 @@ class AppController extends Controller
         
         if(empty($this->request->getHeader('Authorization'))){
 
-            $this->response->statusCode(401);
             $this->setAction('missingToken');
 
         }else{
@@ -93,13 +92,13 @@ class AppController extends Controller
 
                 $email = EncryptionComponent::Decrypt($partA, Security::salt());
                 $expDate = EncryptionComponent::Decrypt($partB, Security::salt());
-
+                
                 $user = $this->Users
                     ->find()
                     ->where(['email'=>$email,'active'=>1])
-                    ->toArray()[0];
+                    ->toArray();
 
-                if(!empty($user)){
+                if(!empty($user[0])){
 
                     $dateArray = preg_split("/[_]/",$expDate);
                     $datePart = $dateArray[0];
@@ -110,35 +109,41 @@ class AppController extends Controller
                     $now = new Time(null, 'America/New_York');
 
                     if($now < $expirationDate){
-                        $this->response->statusCode(401);
                         $this->setAction('expiredToken');
                     }
 
                 }else{
-                    $this->response->statusCode(401);
                     $this->setAction('invalidToken');
                 }  
 
             }else{
-                $this->response->statusCode(401);
                 $this->setAction('invalidToken');
             }
         }
     }
 
-    protected function invalidToken(){
+    public function invalidToken(){
+        $this->response->statusCode(401);
         $message = 'Invalid Authorization Token';
         $this->set('message',$message);
     }
 
-    protected function missingToken(){
+    public function missingToken(){
+        $this->response->statusCode(401);
         $message = 'Missing Authorization Token';
         $this->set('message',$message);
     }
 
-    protected function expiredToken(){
+    public function expiredToken(){
+        $this->response->statusCode(401);
         $message = 'Expired Authorization Token';
         $this->set('message',$message);
+    }
+
+    public function invalidMethod(){
+        $this->response->statusCode(405);
+        $message = 'Method Not Allowed';
+        $this->set('error',$message);
     }
 
     /**
