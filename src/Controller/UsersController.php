@@ -63,7 +63,7 @@ class UsersController extends AppController
                 //If the user is found by email, it verifies if the password matches the one stored in DB.
                 if($user[0] && password_verify($body['password'], $user[0]['password'])){
 
-                    $token = $this->generateToken($user['email']);
+                    $token = $this->generateToken($user[0]['email']);
                     $this->set('user', $user[0]);
                     $this->set('token', $token); 
                 
