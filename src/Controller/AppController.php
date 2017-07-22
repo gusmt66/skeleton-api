@@ -23,6 +23,7 @@ use Cake\Event\Event;
 use Cake\I18n\Time;
 use Cake\Utility\Security;
 use App\Controller\Component\EncryptionComponent;
+use Cake\Routing\Router;
 
 /**
  * Application Controller
@@ -34,6 +35,11 @@ use App\Controller\Component\EncryptionComponent;
  */
 class AppController extends Controller
 {
+
+    public $paginate = [
+        'limit' => 5
+    ];
+    public $baseUrl;
 
     /**
      * Initialization hook method.
@@ -72,17 +78,24 @@ class AppController extends Controller
         $this->set('_serialize', true);
     }
 
+    public function getFullUrl(){
+        
+        $domain = $this->request->domain();
+        $path = $this->request->here(true);
+        return 'http://' . $domain . $path;
+    }
+
     protected function validateToken(){
         
-        if(empty($this->request->getHeader('Authorization'))){
+        $token = $this->request->getHeader('x-api-key');
+
+        if(empty($token)){
 
             $this->setAction('missingToken');
 
         }else{
 
-            $token = $this->request->getHeader('Authorization')[0];
-            
-            $tokenArray = preg_split("/[.]/", $token);
+            $tokenArray = preg_split("/[.]/", $token[0]);
 
             //Validates that the token has a dot
             if(sizeof($tokenArray) > 1){
